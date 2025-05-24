@@ -25,4 +25,4 @@ jobs:
         run: mvn -B clean verify --file ./simple-api/pom.xml
 
       - name: Afficher l'identifiant DockerHub (test)
-        run: echo "Nom d'utilisateur DockerHub : ${{ secrets.DOCKERHUB_USERNAME }}"
+        run: echo 'Nom d'utilisateur DockerHub : ${{ secrets.DOCKERHUB_USERNAME }}'
