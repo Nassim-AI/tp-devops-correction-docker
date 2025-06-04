@@ -28,8 +28,8 @@ jobs:
       - name: Deploy app on server
         uses: appleboy/ssh-action@v0.1.7
         with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
+          host: 4.231.234.236
+          username: azureuser
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
