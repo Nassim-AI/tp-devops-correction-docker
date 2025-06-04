@@ -26,7 +26,7 @@ jobs:
         run: docker push nassim77/tp-devops-simple-api:latest
 
       - name: Setup SSH key
-        uses: appleboy/ssh-action@v0.1.7
+        uses: webfactory/ssh-agent@v0.8.1
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
