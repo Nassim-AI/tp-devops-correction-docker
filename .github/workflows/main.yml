@@ -19,12 +19,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
+      # Build and push simple-api image
+      - name: Build simple-api Docker image
         run: docker build -t nassim77/tp-devops-simple-api:latest ./simple-api
 
-      - name: Push Docker image to Hub
+      - name: Push simple-api Docker image to Hub
         run: docker push nassim77/tp-devops-simple-api:latest
 
+      # Build and push httpd image (proxy)
+      - name: Build httpd Docker image
+        run: docker build -t nassim77/tp-devops-httpd:latest ./http-server
+
+      - name: Push httpd Docker image to Hub
+        run: docker push nassim77/tp-devops-httpd:latest
+
+      # Build and push database image
+      - name: Build database Docker image
+        run: docker build -t nassim77/tp-devops-database:latest ./database
+
+      - name: Push database Docker image to Hub
+        run: docker push nassim77/tp-devops-database:latest
+
+      # Deploy all containers on server
       - name: Deploy app on server
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -33,7 +49,20 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
+            # Pull and restart database container
+            docker pull nassim77/tp-devops-database:latest
+            docker stop postgres-db || true
+            docker rm postgres-db || true
+            docker run -d --name postgres-db -p 5432:5432 nassim77/tp-devops-database:latest
+
+            # Pull and restart backend API container
             docker pull nassim77/tp-devops-simple-api:latest
             docker stop backend-api || true
             docker rm backend-api || true
             docker run -d --name backend-api -p 8080:8080 nassim77/tp-devops-simple-api:latest
+
+            # Pull and restart proxy container
+            docker pull nassim77/tp-devops-httpd:latest
+            docker stop httpd-proxy || true
+            docker rm httpd-proxy || true
+            docker run -d --name httpd-proxy -p 80:80 nassim77/tp-devops-httpd:latest
