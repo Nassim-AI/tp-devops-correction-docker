@@ -1,71 +1,40 @@
-name: CI devops 2025
+name: Deploy Docker App
 
 on:
   push:
     branches:
-      - main
-      - develop
-  pull_request:
+      - main # Déploie uniquement quand tu pousses sur main
 
 jobs:
-  test-backend:
-    runs-on: ubuntu-24.04
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout du dépôt
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
         with:
-          distribution: temurin
-          java-version: "21"
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and test with Maven
-        run: mvn -B clean verify --file ./simple-api/pom.xml
+      - name: Build Docker image
+        run: docker build -t nassim77/tp-devops-simple-api:latest ./simpleapi
 
-      - name: Analyse SonarCloud
-        working-directory: ./simple-api
+      - name: Push Docker image to Hub
+        run: docker push nassim77/tp-devops-simple-api:latest
+
+      - name: Setup SSH key
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy app on server
         run: |
-          mvn -B verify sonar:sonar \
-            -Dsonar.projectKey=Nassim-AI_tp-devops-correction-docker \
-            -Dsonar.organization=nassim-ai \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-
-      - name: Afficher l'identifiant DockerHub (test)
-        run: |
-          echo "Nom d'utilisateur DockerHub : ${{ secrets.DOCKERHUB_USERNAME }}"
-
-  build-and-push-docker-image:
-    needs: test-backend
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Login to DockerHub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-
-      - name: Build image and push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./simple-api
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-simple-api:latest
-          push: true
-
-      - name: Build image and push database
-        uses: docker/build-push-action@v6
-        with:
-          context: ./database
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-database:latest
-          push: true
-
-      - name: Build image and push httpd
-        uses: docker/build-push-action@v6
-        with:
-          context: ./http-server
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/tp-devops-httpd:latest
-          push: true
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << EOF
+          docker pull nassim77/tp-devops-simple-api:latest
+          docker stop backend-api || true
+          docker rm backend-api || true
+          docker run -d --name backend-api -p 8080:8080 nassim77/tp-devops-simple-api:latest
+          EOF
