@@ -3,7 +3,7 @@ name: Deploy Docker App
 on:
   push:
     branches:
-      - main # Déploie uniquement quand tu pousses sur main
+      - main # Déploie uniquement quand on pousse sur main
 
 jobs:
   build-and-deploy:
